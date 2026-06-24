@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-api
+  labels:
+    app: node-api
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: node-api
+
+  template:
+    metadata:
+      labels:
+        app: node-api
+
+    spec:
+      containers:
+      - name: node-api
+
+        image: 221161988433.dkr.ecr.us-east-1.amazonaws.com/lab-gitops:latest
+
+        imagePullPolicy: Always
+
+        ports:
+        - containerPort: 3000
+
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+
+          limits:
+            cpu: 250m
+            memory: 256Mi
+
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+
+          initialDelaySeconds: 15
+          periodSeconds: 20
+
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+
+          initialDelaySeconds: 5
+          periodSeconds: 10
