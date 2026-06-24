@@ -24,7 +24,7 @@ spec:
       containers:
       - name: node-api
 
-        image: 221161988433.dkr.ecr.us-east-1.amazonaws.com/lab-gitops:latest
+        image: 221161988433.dkr.ecr.us-east-1.amazonaws.com/lab-gitops:f8f61fb
 
         imagePullPolicy: Always
 
