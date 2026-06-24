@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ecr-cred-refresher
+  namespace: node-api
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ecr-cred-refresher
+  namespace: node-api
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ecr-cred-refresher
+  namespace: node-api
+subjects:
+- kind: ServiceAccount
+  name: ecr-cred-refresher
+  namespace: node-api
+roleRef:
+  kind: Role
+  name: ecr-cred-refresher
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ecr-cred-refresh
+  namespace: node-api
+spec:
+  schedule: "0 */6 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: ecr-cred-refresher
+          restartPolicy: OnFailure
+          volumes:
+          - name: token
+            emptyDir: {}
+          initContainers:
+          - name: get-token
+            image: amazon/aws-cli:2.15.30
+            envFrom:
+            - secretRef:
+                name: aws-credentials
+            command: ["sh", "-c", "aws ecr get-login-password --region us-east-1 > /token/password"]
+            volumeMounts:
+            - name: token
+              mountPath: /token
+          containers:
+          - name: update-secret
+            image: bitnami/kubectl:latest
+            command:
+            - sh
+            - -c
+            - |
+              kubectl create secret docker-registry regcred \
+                --docker-server=221161988433.dkr.ecr.us-east-1.amazonaws.com \
+                --docker-username=AWS \
+                --docker-password="$(cat /token/password)" \
+                -n node-api --dry-run=client -o yaml | kubectl apply -f -
+            volumeMounts:
+            - name: token
+              mountPath: /token

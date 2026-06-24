@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: node-api
+  namespace: node-apic
   labels:
     app: node-api
 spec:
@@ -17,6 +18,9 @@ spec:
         app: node-api
 
     spec:
+      imagePullSecrets:
+      - name: regcred
+
       containers:
       - name: node-api
 
