@@ -5,3 +5,4 @@ resources:
 - deployment.yaml
 - services.yaml
 - ecr-cred-refresh.yaml
+- ecr-cred-bootstrap.yaml

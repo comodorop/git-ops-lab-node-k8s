@@ -1,0 +1,46 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ecr-cred-bootstrap
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      serviceAccountName: ecr-cred-refresher
+      restartPolicy: Never
+      volumes:
+      - name: token
+        emptyDir: {}
+      initContainers:
+      - name: get-token
+        image: amazon/aws-cli:2.15.30
+        envFrom:
+        - secretRef:
+            name: aws-credentials
+        command: ["sh", "-c", "aws ecr get-login-password --region us-east-1 > /token/password"]
+        volumeMounts:
+        - name: token
+          mountPath: /token
+      containers:
+      - name: create-secret
+        image: bitnami/kubectl:latest
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        command:
+        - sh
+        - -c
+        - |
+          kubectl create secret docker-registry regcred \
+            --docker-server=221161988433.dkr.ecr.us-east-1.amazonaws.com \
+            --docker-username=AWS \
+            --docker-password="$(cat /token/password)" \
+            -n "$POD_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+        volumeMounts:
+        - name: token
+          mountPath: /token

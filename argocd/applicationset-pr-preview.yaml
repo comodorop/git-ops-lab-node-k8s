@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: node-api-pr-preview
+  namespace: argocd
+spec:
+  generators:
+  - pullRequest:
+      github:
+        owner: comodorop
+        repo: git-ops-lab-node
+        tokenRef:
+          secretName: github-pr-token
+          key: token
+      requeueAfterSeconds: 60
+  template:
+    metadata:
+      name: 'node-api-pr-{{number}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/comodorop/git-ops-lab-node-k8s.git
+        targetRevision: feature/preview-envs # TODO: cambiar a main cuando mergeemos base/
+        path: base
+        kustomize:
+          namespace: 'node-api-pr-{{number}}'
+          images:
+          - '221161988433.dkr.ecr.us-east-1.amazonaws.com/lab-gitops=221161988433.dkr.ecr.us-east-1.amazonaws.com/lab-gitops:pr-{{number}}-{{head_short_sha}}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: 'node-api-pr-{{number}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+        - CreateNamespace=true
